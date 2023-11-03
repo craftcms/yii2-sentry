@@ -25,10 +25,9 @@ use yii\base\BootstrapInterface;
 use yii\base\Controller;
 use yii\base\Event;
 use yii\base\InlineAction;
-use yii\httpclient\Client;
-use yii\httpclient\RequestEvent;
 use yii\web\User;
 use yii\web\UserEvent;
+use function Sentry\continueTrace;
 use function Sentry\startTransaction;
 
 class Component extends \yii\base\Component implements BootstrapInterface
@@ -158,7 +157,12 @@ class Component extends \yii\base\Component implements BootstrapInterface
         Event::on(Controller::class, Controller::EVENT_BEFORE_ACTION, function (ActionEvent $event) use ($app, &$transaction, &$span) {
             $route = $event->action->getUniqueId();
 
-            $transactionContext = new TransactionContext();
+            $transactionContext = continueTrace(
+                Yii::$app->request->headers->get('sentry-trace', ''),
+                Yii::$app->request->headers->get('baggage', ''),
+            );
+            Yii::info('Transaction context');
+            Yii::info(json_encode($transactionContext));
             $transactionContext->setName($event->sender->id);
             $transactionContext->setOp($route);
 
